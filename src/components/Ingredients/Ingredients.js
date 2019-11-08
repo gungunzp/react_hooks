@@ -4,6 +4,7 @@ import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
 import ErrorModal from '../UI/ErrorModal';
 import Search from './Search';
+import useHttp from '../../hooks/http';
 
 const ingredientReducer = (currentIngredients, action) => {
   switch (action.type) {
@@ -18,76 +19,59 @@ const ingredientReducer = (currentIngredients, action) => {
   }
 };
 
-const httpReducer = (curHttpState, action) => {
-  switch (action.type) {
-    case 'SEND':
-      return { loading: true, error: null };
-    case 'RESPONCE':
-      return { ...curHttpState, loading: false };
-    case 'ERROR':
-      return { loading: false, error: action.errorMessage };
-    case 'CLEAR':
-      return { ...curHttpState, error: null };
-    default:
-      throw new Error('Should not get there');
-  }
-};
-
 const Ingredients = () => {
   const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
-  const [httpState, dispatchHttp] = useReducer(httpReducer, {
-    loading: false,
-    error: null
-  });
+  const {
+    isLoading,
+    error,
+    data,
+    sendRequest,
+    reqExtra,
+    reqIdentifier,
+    clear
+  } = useHttp();
 
-  useEffect(() => console.log('RENDERING INGREDIENTS', userIngredients), [
-    userIngredients
-  ]);
+  useEffect(() => {
+    if (!isLoading && !error) {
+      if (reqIdentifier === 'REMOVE_INGREDIENT') {
+        dispatch({ type: 'DELETE', id: reqExtra });
+      } else if (reqIdentifier === 'ADD_INGREDIENT') {
+        dispatch({
+          type: 'ADD',
+          ingredient: { id: data.name, ...reqExtra }
+        });
+      }
+    }
+  }, [data, reqExtra, reqIdentifier, isLoading, error]);
 
   const filteredIngredientsHandler = useCallback(filteredIngredients => {
     dispatch({ type: 'SET', ingredients: filteredIngredients });
   }, []);
 
-  const addIngredientHandler = useCallback(ingredient => {
-    dispatchHttp({ type: 'SEND' });
-    fetch('https://react-hooks-update-3260a.firebaseio.com/ingredients.json', {
-      method: 'POST',
-      body: JSON.stringify(ingredient),
-      headers: { 'Content-Type': 'application/json' }
-    })
-      .then(response => {
-        dispatchHttp({ type: 'RESPONCE' });
-        return response.json();
-      })
-      .then(responseData => {
-        console.log(responseData);
-        dispatch({
-          type: 'ADD',
-          ingredient: { id: responseData.name, ...ingredient }
-        });
-      });
-  }, []);
+  const addIngredientHandler = useCallback(
+    ingredient => {
+      sendRequest(
+        'https://react-hooks-update-3260a.firebaseio.com/ingredients.json',
+        'POST',
+        JSON.stringify(ingredient),
+        ingredient,
+        'ADD_INGREDIENT'
+      );
+    },
+    [sendRequest]
+  );
 
-  const removeIngredientHandler = useCallback(ingredientId => {
-    dispatchHttp({ type: 'SEND' });
-    fetch(
-      `https://react-hooks-update-3260a.firebaseio.com/ingredients/${ingredientId}.json`,
-      {
-        method: 'DELETE'
-      }
-    )
-      .then(response => {
-        dispatchHttp({ type: 'RESPONCE' });
-        dispatch({ type: 'DELETE', id: ingredientId });
-      })
-      .catch(error => {
-        dispatchHttp({ type: 'ERROR', errorMessage: 'Something went wrong!' });
-      });
-  }, []);
-
-  const clearError = useCallback(() => {
-    dispatchHttp({ type: 'CLEAR' });
-  }, []);
+  const removeIngredientHandler = useCallback(
+    ingredientId =>
+      sendRequest(
+        `https://react-hooks-update-3260a.firebaseio.com/ingredients/${ingredientId}.json`,
+        'DELETE',
+        null,
+        ingredientId,
+        'REMOVE_INGREDIENT'
+      ),
+    [sendRequest]
+  );
 
   const ingredientList = useMemo(
     () => (
@@ -101,13 +85,11 @@ const Ingredients = () => {
 
   return (
     <div className="App">
-      {httpState.error && (
-        <ErrorModal onClose={clearError}>{httpState.error}</ErrorModal>
-      )}
+      {error && <ErrorModal onClose={clear}>{error}</ErrorModal>}
 
       <IngredientForm
         onAddIngredient={addIngredientHandler}
-        loading={httpState.loading}
+        loading={isLoading}
       />
 
       <section>
