@@ -22,3 +22,12 @@
   display: flex;
   justify-content: space-between;
 }
+
+.scroll-indicator {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  background-color: rgba(0, 128, 0, 0.5);
+  color: #fff;
+  padding: 10px;
+}

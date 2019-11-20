@@ -8,3 +8,10 @@ Compare my code to yours to solve issues you might encounter. You may also copy 
 https://console.firebase.google.com/u/1/project/react-hooks-update-3260a/database/react-hooks-update-3260a/data
 
 https://github.com/gungunzp/react_hooks
+
+
+
+YouTube tutorials:
+
+yt1: https://www.youtube.com/watch?v=d9Pndaq9MJs
+
